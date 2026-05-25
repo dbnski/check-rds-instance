@@ -52,10 +52,12 @@ operators (`<`, `>`, etc.) return an error.
 | Category | Operators |
 |----------|-----------|
 | Arithmetic | `+` `-` `*` `/` |
-| Comparison | `==` `!=` `<` `>` `<=` `>=` |
+| Comparison | `==` `!=` `<>` `<` `>` `<=` `>=` |
 | Logical | `&&` `\|\|` `!` |
 
 Standard operator precedence applies. Use parentheses to override.
+
+`<>` is accepted as an alias for `!=` (useful in Nagios configs where `!` must be escaped).
 
 ### Field access
 

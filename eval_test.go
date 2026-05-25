@@ -67,6 +67,8 @@ func TestEvaluate(t *testing.T) {
 		{"eq false", "1 + 2 == 4", false, false},
 		{"neq strings", `"ala" != "kota"`, true, false},
 		{"neq false", `"same" != "same"`, false, false},
+		{"diamond neq true", `"ala" <> "kota"`, true, false},
+		{"diamond neq false", `"same" <> "same"`, false, false},
 		{"lt numbers", "AllocatedStorage < MaxAllocatedStorage", true, false},
 		{"lt false", "MaxAllocatedStorage < AllocatedStorage", false, false},
 		{"gt", "MaxAllocatedStorage > AllocatedStorage", true, false},

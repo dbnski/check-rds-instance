@@ -137,8 +137,8 @@ func lex(src string) (*lexer, error) {
 				l.tokens = append(l.tokens, token{kind: tkEq, sval: "=="})
 				i += 2
 				continue
-			case "!=":
-				l.tokens = append(l.tokens, token{kind: tkNeq, sval: "!="})
+			case "!=", "<>":
+				l.tokens = append(l.tokens, token{kind: tkNeq, sval: src[i : i+2]})
 				i += 2
 				continue
 			case "<=":
@@ -768,7 +768,7 @@ func (e *evaluator) evalBin(n *binExpr) (interface{}, error) {
 
 	case "==":
 		return valEqual(lv, rv), nil
-	case "!=":
+	case "!=", "<>":
 		return !valEqual(lv, rv), nil
 
 	case "<":
