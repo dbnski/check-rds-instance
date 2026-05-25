@@ -1,4 +1,4 @@
-# rds-instance-check
+# check-rds-instance
 
 A Nagios-compatible plugin that checks any field returned by the AWS
 `DescribeDBInstances` API against user-supplied expressions, including nested
@@ -12,7 +12,7 @@ objects and arrays.
 ## Usage
 
 ```
-rds-instance-check -i <instance-id> [-e <global-expr>]
+check-rds-instance -i <instance-id> [-e <global-expr>]
                    ( -w <warning-expr> | -c <critical-expr> | both )
 ```
 
@@ -195,7 +195,7 @@ sub-expression in both thresholds.
 Warn at 80 %, alert at 90 % of the auto-scaling ceiling:
 
 ```sh
-AWS_DEFAULT_REGION=eu-west-1 rds-instance-check -i my-mysql \
+AWS_DEFAULT_REGION=eu-west-1 check-rds-instance -i my-mysql \
   -e "AllocatedStorage / ifnull(MaxAllocatedStorage, AllocatedStorage)" \
   -w "MaxAllocatedStorage != null && Value > 0.8" \
   -c "MaxAllocatedStorage != null && Value > 0.9"
@@ -210,7 +210,7 @@ CRITICAL: Value > 0.9 (Value=0.94)
 ### Direct threshold without global expression
 
 ```sh
-AWS_DEFAULT_REGION=eu-west-1 rds-instance-check -i my-mysql \
+AWS_DEFAULT_REGION=eu-west-1 check-rds-instance -i my-mysql \
   -w "ifnull(MaxAllocatedStorage, 0) * 0.8 < AllocatedStorage" \
   -c "ifnull(MaxAllocatedStorage, 0) * 0.9 < AllocatedStorage"
 ```
@@ -220,14 +220,14 @@ AWS_DEFAULT_REGION=eu-west-1 rds-instance-check -i my-mysql \
 Alert if any parameter group is not in-sync (pending reboot):
 
 ```sh
-AWS_DEFAULT_REGION=eu-west-1 rds-instance-check -i my-mysql \
+AWS_DEFAULT_REGION=eu-west-1 check-rds-instance -i my-mysql \
   -c "any(DBParameterGroups, it.ParameterApplyStatus != \"in-sync\")"
 ```
 
 Or using direct index access for a single-group setup:
 
 ```sh
-AWS_DEFAULT_REGION=eu-west-1 rds-instance-check -i my-mysql \
+AWS_DEFAULT_REGION=eu-west-1 check-rds-instance -i my-mysql \
   -c "DBParameterGroups[0].ParameterApplyStatus != \"in-sync\""
 ```
 
@@ -237,7 +237,7 @@ Warn if a credential or certificate field expires within 30 days, critical if
 already expired:
 
 ```sh
-AWS_DEFAULT_REGION=eu-west-1 rds-instance-check -i my-mysql \
+AWS_DEFAULT_REGION=eu-west-1 check-rds-instance -i my-mysql \
   -c "ValidTill < now() + INTERVAL 7 DAYS" \
   -w "ValidTill < now() + INTERVAL 30 DAYS"
 ```
@@ -245,7 +245,7 @@ AWS_DEFAULT_REGION=eu-west-1 rds-instance-check -i my-mysql \
 ### Multi-AZ enforcement
 
 ```sh
-AWS_DEFAULT_REGION=eu-west-1 rds-instance-check -i my-mysql \
+AWS_DEFAULT_REGION=eu-west-1 check-rds-instance -i my-mysql \
   -c "MultiAZ == false"
 ```
 
@@ -271,16 +271,16 @@ Examples:
 AWS_REGION=eu-west-1 \
 AWS_ACCESS_KEY_ID=AKIA... \
 AWS_SECRET_ACCESS_KEY=... \
-  rds-instance-check -i my-mysql ...
+  check-rds-instance -i my-mysql ...
 
 # Non-default credentials file
 AWS_REGION=eu-west-1 \
 AWS_SHARED_CREDENTIALS_FILE=/etc/nagios/aws-credentials \
-  rds-instance-check -i my-mysql ...
+  check-rds-instance -i my-mysql ...
 
 # Named profile
 AWS_REGION=eu-west-1 AWS_PROFILE=monitoring \
-  rds-instance-check -i my-mysql ...
+  check-rds-instance -i my-mysql ...
 ```
 
 ## Available fields

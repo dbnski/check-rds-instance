@@ -1,4 +1,4 @@
-module github.com/dbnski/rds-instance-check
+module github.com/dbnski/check-rds-instance
 
 go 1.24.13
 

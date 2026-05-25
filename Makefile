@@ -1,4 +1,4 @@
-BINARY      := rds-instance-check
+BINARY      := check-rds-instance
 VERSION     := $(shell cat VERSION)
 COMMIT_HASH := $(shell git rev-parse --short HEAD)
 BUILD_TIME  := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
