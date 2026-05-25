@@ -1,0 +1,27 @@
+{
+  "AllocatedStorage": 85,
+  "MaxAllocatedStorage": 100,
+  "DBInstanceClass": "db.r6g.xlarge",
+  "DBInstanceIdentifier": "my-mysql",
+  "DBInstanceStatus": "available",
+  "Engine": "mysql",
+  "EngineVersion": "8.0.41",
+  "MultiAZ": true,
+  "StorageEncrypted": true,
+  "DeletionProtection": true,
+  "BackupRetentionPeriod": 7,
+  "DBParameterGroups": [
+    {
+      "DBParameterGroupName": "default.mysql80",
+      "ParameterApplyStatus": "in-sync"
+    }
+  ],
+  "DBSubnetGroup": {
+    "DBSubnetGroupName": "subnet-group",
+    "VpcId": "vpc-12345678",
+    "Subnets": [
+      {"SubnetIdentifier": "subnet-aaa", "SubnetStatus": "Active"},
+      {"SubnetIdentifier": "subnet-bbb", "SubnetStatus": "Inactive"}
+    ]
+  }
+}
