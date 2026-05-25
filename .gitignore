@@ -17,6 +17,7 @@
 !do-release
 !VERSION
 !README.md
+!LICENSE
 !testdata/*.json
 
 # ...even if they are in subdirectories
