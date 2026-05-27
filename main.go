@@ -26,7 +26,7 @@ const (
 )
 
 func main() {
-	version    := flag.Bool("version", false, "Print version information and exit")
+	version    := flag.Bool("v", false, "Print version information and exit")
 	ident      := flag.String("i", "", "Instance identifier (required)")
 	exprGlobal := flag.String("e", "", "Global expression; result is injected as 'Value' into -w/-c")
 	warnExpr   := flag.String("w", "", "Warning expression - must evaluate to bool")
