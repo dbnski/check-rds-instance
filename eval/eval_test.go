@@ -1,4 +1,4 @@
-package main
+package eval
 
 import (
 	"fmt"
@@ -6,27 +6,25 @@ import (
 	"time"
 )
 
-// baseCtx provides a realistic DBInstance-shaped context for evaluator tests.
+// baseCtx provides a generic map context for evaluator tests.
 func baseCtx() map[string]interface{} {
 	return map[string]interface{}{
-		"AllocatedStorage":      float64(80),
-		"MaxAllocatedStorage":   float64(100),
-		"DBInstanceStatus":      "available",
-		"DBInstanceClass":       "db.r6g.xlarge",
-		"MultiAZ":               true,
-		"StorageEncrypted":      true,
-		"BackupRetentionPeriod": float64(7),
-		"DBParameterGroups": []interface{}{
+		"Used":          float64(80),
+		"Capacity":      float64(100),
+		"Status":        "available",
+		"Class":         "large",
+		"Encrypted":     true,
+		"Configs": []interface{}{
 			map[string]interface{}{
-				"DBParameterGroupName": "default.postgres15",
-				"ParameterApplyStatus": "in-sync",
+				"Name":   "default",
+				"Status": "in-sync",
 			},
 		},
-		"DBSubnetGroup": map[string]interface{}{
-			"VpcId": "vpc-12345",
+		"Network": map[string]interface{}{
+			"Id": "vpc-12345",
 			"Subnets": []interface{}{
-				map[string]interface{}{"SubnetIdentifier": "subnet-aaa", "SubnetStatus": "Active"},
-				map[string]interface{}{"SubnetIdentifier": "subnet-bbb", "SubnetStatus": "Inactive"},
+				map[string]interface{}{"Identifier": "subnet-aaa", "Status": "Active"},
+				map[string]interface{}{"Identifier": "subnet-bbb", "Status": "Inactive"},
 			},
 		},
 	}
@@ -55,12 +53,12 @@ func TestEvaluate(t *testing.T) {
 		{"multiply", "4 * 3", float64(12), false},
 		{"divide", "10 / 4", float64(2.5), false},
 		{"unary minus literal", "-5", float64(-5), false},
-		{"unary minus variable", "-AllocatedStorage", float64(-80), false},
+		{"unary minus variable", "-Used", float64(-80), false},
 		{"mul before add", "2 + 3 * 4", float64(14), false},
 		{"paren overrides precedence", "(2 + 3) * 4", float64(20), false},
 		{"string concatenation", `"foo" + "bar"`, "foobar", false},
-		{"variable in arithmetic", "MaxAllocatedStorage * 0.8", float64(80), false},
-		{"multi-variable arithmetic", "MaxAllocatedStorage - AllocatedStorage", float64(20), false},
+		{"variable in arithmetic", "Capacity * 0.8", float64(80), false},
+		{"multi-variable arithmetic", "Capacity - Used", float64(20), false},
 
 		// ── Comparison ────────────────────────────────────────────────────────
 		{"eq true", "1 + 2 == 3", true, false},
@@ -69,16 +67,16 @@ func TestEvaluate(t *testing.T) {
 		{"neq false", `"same" != "same"`, false, false},
 		{"diamond neq true", `"ala" <> "kota"`, true, false},
 		{"diamond neq false", `"same" <> "same"`, false, false},
-		{"lt numbers", "AllocatedStorage < MaxAllocatedStorage", true, false},
-		{"lt false", "MaxAllocatedStorage < AllocatedStorage", false, false},
-		{"gt", "MaxAllocatedStorage > AllocatedStorage", true, false},
-		{"gt false", "MaxAllocatedStorage * 0.8 > AllocatedStorage", false, false},
-		{"gte equal", "MaxAllocatedStorage * 0.8 >= AllocatedStorage", true, false},
-		{"lte", "AllocatedStorage <= MaxAllocatedStorage", true, false},
+		{"lt numbers", "Used < Capacity", true, false},
+		{"lt false", "Capacity < Used", false, false},
+		{"gt", "Capacity > Used", true, false},
+		{"gt false", "Capacity * 0.8 > Used", false, false},
+		{"gte equal", "Capacity * 0.8 >= Used", true, false},
+		{"lte", "Used <= Capacity", true, false},
 		{"string comparison lt", `"apple" < "banana"`, true, false},
 		{"string comparison gt", `"zebra" > "apple"`, true, false},
-		{"string eq", `DBInstanceStatus == "available"`, true, false},
-		{"string neq", `DBInstanceStatus != "modifying"`, true, false},
+		{"string eq", `Status == "available"`, true, false},
+		{"string neq", `Status != "modifying"`, true, false},
 
 		// ── Logical operators ─────────────────────────────────────────────────
 		{"and both true", "true && true", true, false},
@@ -89,64 +87,64 @@ func TestEvaluate(t *testing.T) {
 		{"or right true", "false || true", true, false},
 		{"not true", "!true", false, false},
 		{"not false", "!false", true, false},
-		{"not comparison", `!(DBInstanceStatus == "available")`, false, false},
+		{"not comparison", `!(Status == "available")`, false, false},
 		// Short-circuit: right side is never evaluated
 		{"and short-circuits on false", "false && UnknownFn()", false, false},
 		{"or short-circuits on true", "true || UnknownFn()", true, false},
 
 		// ── Variable / field access ───────────────────────────────────────────
-		{"top-level field", "AllocatedStorage", float64(80), false},
-		{"bool field", "MultiAZ", true, false},
+		{"top-level field", "Used", float64(80), false},
+		{"bool field", "Encrypted", true, false},
 		{"missing field returns undefined", "NoSuchField", undefinedType{}, false},
-		{"nested field", "DBSubnetGroup.VpcId", "vpc-12345", false},
-		{"double-nested field", "DBSubnetGroup.Subnets[0].SubnetStatus", "Active", false},
-		{"array index 0", "DBSubnetGroup.Subnets[0].SubnetIdentifier", "subnet-aaa", false},
-		{"array index 1", "DBSubnetGroup.Subnets[1].SubnetStatus", "Inactive", false},
-		{"array element of param group", "DBParameterGroups[0].ParameterApplyStatus", "in-sync", false},
-		{"out-of-bounds index", "DBSubnetGroup.Subnets[5]", undefinedType{}, false},
-		{"missing nested key", "DBSubnetGroup.NoSuchKey", undefinedType{}, false},
+		{"nested field", "Network.Id", "vpc-12345", false},
+		{"double-nested field", "Network.Subnets[0].Status", "Active", false},
+		{"array index 0", "Network.Subnets[0].Identifier", "subnet-aaa", false},
+		{"array index 1", "Network.Subnets[1].Status", "Inactive", false},
+		{"array element of param group", "Configs[0].Status", "in-sync", false},
+		{"out-of-bounds index", "Network.Subnets[5]", undefinedType{}, false},
+		{"missing nested key", "Network.NoSuchKey", undefinedType{}, false},
 		{"chain from missing", "NoSuchField.Child", undefinedType{}, false},
 
 		// ── exists() ─────────────────────────────────────────────────────────
-		{"exists present", "exists(DBSubnetGroup.Subnets[0])", true, false},
-		{"exists present index 1", "exists(DBSubnetGroup.Subnets[1])", true, false},
-		{"exists out of bounds", "exists(DBSubnetGroup.Subnets[5])", false, false},
-		{"exists missing nested key", "exists(DBSubnetGroup.Missing)", false, false},
+		{"exists present", "exists(Network.Subnets[0])", true, false},
+		{"exists present index 1", "exists(Network.Subnets[1])", true, false},
+		{"exists out of bounds", "exists(Network.Subnets[5])", false, false},
+		{"exists missing nested key", "exists(Network.Missing)", false, false},
 		{"exists missing top-level", "exists(NoSuchField)", false, false},
-		{"exists in logical", "exists(MultiAZ) && MultiAZ == true", true, false},
-		{"not exists", "!exists(DBSubnetGroup.Subnets[5])", true, false},
+		{"exists in logical", "exists(Encrypted) && Encrypted == true", true, false},
+		{"not exists", "!exists(Network.Subnets[5])", true, false},
 
 		// ── len() ─────────────────────────────────────────────────────────────
-		{"len array 2", "len(DBSubnetGroup.Subnets)", float64(2), false},
-		{"len array 1", "len(DBParameterGroups)", float64(1), false},
+		{"len array 2", "len(Network.Subnets)", float64(2), false},
+		{"len array 1", "len(Configs)", float64(1), false},
 		{"len missing field", "len(NoSuchArray)", float64(0), false},
 		{"len string", `len("hello")`, float64(5), false},
 		{"len empty string", `len("")`, float64(0), false},
-		{"len in comparison", "len(DBSubnetGroup.Subnets) >= 2", true, false},
-		{"len too few subnets", "len(DBSubnetGroup.Subnets) < 2", false, false},
+		{"len in comparison", "len(Network.Subnets) >= 2", true, false},
+		{"len too few subnets", "len(Network.Subnets) < 2", false, false},
 
 		// ── Complex / combined expressions ───────────────────────────────────
-		{"storage ratio threshold true", "AllocatedStorage / MaxAllocatedStorage > 0.7", true, false},
-		{"storage ratio threshold false", "AllocatedStorage / MaxAllocatedStorage > 0.9", false, false},
-		{"status not available", `DBInstanceStatus != "available"`, false, false},
-		{"param in-sync check", `DBParameterGroups[0].ParameterApplyStatus != "in-sync"`, false, false},
-		{"param out-of-sync check", `DBParameterGroups[0].ParameterApplyStatus == "pending-reboot"`, false, false},
-		{"multi-az disabled", "MultiAZ == false", false, false},
-		{"subnet inactive check", `!exists(DBSubnetGroup.Subnets[1]) || DBSubnetGroup.Subnets[1].SubnetStatus != "Active"`, true, false},
-		{"subnet all active", `exists(DBSubnetGroup.Subnets[0]) && DBSubnetGroup.Subnets[0].SubnetStatus == "Active"`, true, false},
-		{"compound and/or", "MultiAZ == true && AllocatedStorage < MaxAllocatedStorage", true, false},
+		{"storage ratio threshold true", "Used / Capacity > 0.7", true, false},
+		{"storage ratio threshold false", "Used / Capacity > 0.9", false, false},
+		{"status not available", `Status != "available"`, false, false},
+		{"param in-sync check", `Configs[0].Status != "in-sync"`, false, false},
+		{"param out-of-sync check", `Configs[0].Status == "pending-reboot"`, false, false},
+		{"multi-az disabled", "Encrypted == false", false, false},
+		{"subnet inactive check", `!exists(Network.Subnets[1]) || Network.Subnets[1].Status != "Active"`, true, false},
+		{"subnet all active", `exists(Network.Subnets[0]) && Network.Subnets[0].Status == "Active"`, true, false},
+		{"compound and/or", "Encrypted == true && Used < Capacity", true, false},
 
 		// ── Parse / evaluation errors ─────────────────────────────────────────
 		{"div by zero", "1 / 0", nil, true},
 		{"unknown function", "unknownFn()", nil, true},
 		{"exists wrong arity", "exists()", nil, true},
-		{"exists too many args", "exists(MultiAZ, AllocatedStorage)", nil, true},
+		{"exists too many args", "exists(Encrypted, Used)", nil, true},
 		{"len wrong arity", "len()", nil, true},
-		{"add type mismatch", `AllocatedStorage + "str"`, nil, true},
+		{"add type mismatch", `Used + "str"`, nil, true},
 		{"sub type mismatch", `"str" - 1`, nil, true},
 		{"compare mixed types", `"abc" < 1`, nil, true},
-		{"index non-array", "AllocatedStorage[0]", nil, true},
-		{"field on scalar", "AllocatedStorage.X", nil, true},
+		{"index non-array", "Used[0]", nil, true},
+		{"field on scalar", "Used.X", nil, true},
 		{"unterminated string", `"unterminated`, nil, true},
 		{"unexpected token", "1 + * 2", nil, true},
 		{"unclosed paren", "(1 + 2", nil, true},
@@ -176,7 +174,7 @@ func TestEvaluate(t *testing.T) {
 func TestEvaluateValueInjection(t *testing.T) {
 	ctx := baseCtx()
 
-	val, err := Evaluate("AllocatedStorage / MaxAllocatedStorage", ctx)
+	val, err := Evaluate("Used / Capacity", ctx)
 	if err != nil {
 		t.Fatalf("global expression error: %v", err)
 	}
@@ -336,30 +334,30 @@ func TestArrayFunctions(t *testing.T) {
 		wantErr bool
 	}{
 		// ── all() ────────────────────────────────────────────────────────────
-		{"all match", `all(DBParameterGroups, it.ParameterApplyStatus == "in-sync")`, true, false},
-		{"all no match", `all(DBSubnetGroup.Subnets, it.SubnetStatus == "Active")`, false, false},
-		{"all empty array", `all(DBParameterGroups, it.ParameterApplyStatus == "x")`, false, false}, // one element, doesn't match
-		{"all string truthy", `all(DBParameterGroups, it.ParameterApplyStatus)`, true, false},
+		{"all match", `all(Configs, it.Status == "in-sync")`, true, false},
+		{"all no match", `all(Network.Subnets, it.Status == "Active")`, false, false},
+		{"all empty array", `all(Configs, it.Status == "x")`, false, false}, // one element, doesn't match
+		{"all string truthy", `all(Configs, it.Status)`, true, false},
 
 		// ── any() ────────────────────────────────────────────────────────────
-		{"any one match", `any(DBSubnetGroup.Subnets, it.SubnetStatus == "Active")`, true, false},
-		{"any no match", `any(DBSubnetGroup.Subnets, it.SubnetStatus == "Unknown")`, false, false},
-		{"any all match", `any(DBParameterGroups, it.ParameterApplyStatus == "in-sync")`, true, false},
+		{"any one match", `any(Network.Subnets, it.Status == "Active")`, true, false},
+		{"any no match", `any(Network.Subnets, it.Status == "Unknown")`, false, false},
+		{"any all match", `any(Configs, it.Status == "in-sync")`, true, false},
 
 		// ── count() ──────────────────────────────────────────────────────────
-		{"count all match", `count(DBParameterGroups, it.ParameterApplyStatus == "in-sync")`, float64(1), false},
-		{"count partial match", `count(DBSubnetGroup.Subnets, it.SubnetStatus == "Active")`, float64(1), false},
-		{"count no match", `count(DBSubnetGroup.Subnets, it.SubnetStatus == "Unknown")`, float64(0), false},
-		{"count in comparison", `count(DBSubnetGroup.Subnets, it.SubnetStatus != "Active") > 0`, true, false},
+		{"count all match", `count(Configs, it.Status == "in-sync")`, float64(1), false},
+		{"count partial match", `count(Network.Subnets, it.Status == "Active")`, float64(1), false},
+		{"count no match", `count(Network.Subnets, it.Status == "Unknown")`, float64(0), false},
+		{"count in comparison", `count(Network.Subnets, it.Status != "Active") > 0`, true, false},
 
 		// ── it does not leak outside the call ────────────────────────────────
-		{"it not set before call", `all(DBParameterGroups, it.ParameterApplyStatus == "in-sync")`, true, false},
+		{"it not set before call", `all(Configs, it.Status == "in-sync")`, true, false},
 
 		// ── error cases ──────────────────────────────────────────────────────
-		{"all wrong arity", `all(DBParameterGroups)`, nil, true},
+		{"all wrong arity", `all(Configs)`, nil, true},
 		{"any wrong arity", `any()`, nil, true},
-		{"count wrong arity", `count(DBParameterGroups, it.ParameterApplyStatus == "x", 3)`, nil, true},
-		{"all non-array", `all(AllocatedStorage, it > 0)`, nil, true},
+		{"count wrong arity", `count(Configs, it.Status == "x", 3)`, nil, true},
+		{"all non-array", `all(Used, it > 0)`, nil, true},
 	}
 
 	for _, tt := range tests {

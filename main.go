@@ -10,6 +10,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/rds"
+
+	"github.com/dbnski/check-rds-instance/eval"
 )
 
 var (
@@ -74,7 +76,7 @@ func main() {
 func runCheck(ctx map[string]interface{}, globalExpr, warnExpr, critExpr string) (int, string) {
 	var valueSuffix string
 	if globalExpr != "" {
-		val, err := Evaluate(globalExpr, ctx)
+		val, err := eval.Evaluate(globalExpr, ctx)
 		if err != nil {
 			return UNKNOWN, fmt.Sprintf("-e expression error: %v", err)
 		}
@@ -106,7 +108,7 @@ func runCheck(ctx map[string]interface{}, globalExpr, warnExpr, critExpr string)
 }
 
 func evalBool(expr string, ctx map[string]interface{}) (bool, error) {
-	val, err := Evaluate(expr, ctx)
+	val, err := eval.Evaluate(expr, ctx)
 	if err != nil {
 		return false, err
 	}
