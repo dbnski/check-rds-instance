@@ -34,19 +34,6 @@ Expressions are evaluated against the `DBInstance` object returned by
 `DescribeDBInstances`. Field names match the Go/AWS API names exactly
 (e.g. `AllocatedStorage`, `MaxAllocatedStorage`, `DBSubnetGroup`).
 
-### Types
-
-| Literal | Example |
-|---------|---------|
-| Number | `100`, `0.8` |
-| String | `"Active"`, `'Active'` |
-| Boolean | `true`, `false` |
-| Null | `null` |
-
-Both JSON `null` field values and fields absent from the API response compare
-equal to `null`.  Only `==` and `!=` are supported for null operands; ordering
-operators (`<`, `>`, etc.) return an error.
-
 ### Operators
 
 | Category | Operators |
@@ -65,7 +52,6 @@ Standard operator precedence applies. Use parentheses to override.
 AllocatedStorage
 DBSubnetGroup.VpcId
 DBSubnetGroup.Subnets[0].SubnetStatus
-DBParameterGroups[0].ParameterApplyStatus
 ```
 
 Accessing a missing key or an out-of-bounds index returns an internal
@@ -88,7 +74,6 @@ Returns the number of elements in an array, or the byte length of a string.
 Returns `0` for null or undefined values.
 
 ```
-len(DBSubnetGroup.Subnets)
 len(DBParameterGroups)
 ```
 
@@ -242,13 +227,6 @@ AWS_DEFAULT_REGION=eu-west-1 check-rds-instance -i my-mysql \
   -w "ValidTill < now() + INTERVAL 30 DAYS"
 ```
 
-### Multi-AZ enforcement
-
-```sh
-AWS_DEFAULT_REGION=eu-west-1 check-rds-instance -i my-mysql \
-  -c "MultiAZ == false"
-```
-
 ## AWS credentials and region
 
 The plugin relies entirely on the standard AWS SDK environment, so no AWS flags are needed.
@@ -287,16 +265,4 @@ AWS_REGION=eu-west-1 AWS_PROFILE=monitoring \
 
 Any field from the
 [DescribeDBInstances response](https://docs.aws.amazon.com/AmazonRDS/latest/APIReference/API_DBInstance.html)
-can be referenced by its exact API name. Commonly used fields:
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `AllocatedStorage` | number | Current storage in GiB |
-| `MaxAllocatedStorage` | number | Auto-scaling ceiling in GiB |
-| `DBInstanceStatus` | string | e.g. `available`, `modifying` |
-| `MultiAZ` | bool | Whether Multi-AZ is enabled |
-| `EngineVersion` | string | Engine version string |
-| `DBParameterGroups` | array | Parameter group assignments |
-| `StorageEncrypted` | bool | Whether storage is encrypted at rest |
-| `DeletionProtection` | bool | Whether deletion protection is on |
-| `BackupRetentionPeriod` | number | Automated backup retention in days |
+can be referenced by its exact API name.
